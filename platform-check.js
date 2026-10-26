@@ -2,32 +2,67 @@
 (function () {
     'use strict';
 
-    if (window.lampaPlatformCheck) return;
-    window.lampaPlatformCheck = true;
+    if (window.lampaPlatformDiagnostic) return;
+    window.lampaPlatformDiagnostic = true;
 
-    function inspect() {
-        var platform = window.Lampa && Lampa.Platform;
-        var result = {
+    function init() {
+        if (!window.Lampa) return;
+
+        var platform = Lampa.Platform;
+        var info = {
             userAgent: navigator.userAgent,
             platformType: typeof platform,
-            platformKeys: platform ? Object.keys(platform) : [],
-            platformValues: {}
+            platform: null
         };
 
-        if (platform) {
-            Object.keys(platform).forEach(function (key) {
-                var value = platform[key];
+        if (platform && typeof platform === 'object') {
+            info.platform = {};
 
-                result.platformValues[key] =
-                    typeof value === 'function'
-                        ? '[function]'
-                        : value;
+            Object.keys(platform).forEach(function (key) {
+                try {
+                    var value = platform[key];
+
+                    info.platform[key] =
+                        typeof value === 'function'
+                            ? '[function]'
+                            : value;
+                } catch (e) {
+                    info.platform[key] = '[error]';
+                }
             });
+        } else {
+            info.platform = platform;
         }
 
-        alert(JSON.stringify(result, null, 2));
+        console.log('LAMPA PLATFORM:', info);
+
+        if (Lampa.Noty && Lampa.Noty.show) {
+            Lampa.Noty.show(
+                'Диагностика выполнена. Проверьте консоль браузера.'
+            );
+        }
     }
 
-    if (window.Lampa) inspect();
-    else alert('Lampa.Platform пока недоступен');
+    function wait() {
+        if (!window.Lampa) {
+            setTimeout(wait, 500);
+            return;
+        }
+
+        if (window.appready) {
+            init();
+        } else if (Lampa.Listener && Lampa.Listener.follow) {
+            Lampa.Listener.follow('app', function (event) {
+                if (event.type === 'ready') init();
+            });
+
+            setTimeout(function () {
+                if (window.appready) init();
+            }, 2000);
+        } else {
+            init();
+        }
+    }
+
+    wait();
 })();
