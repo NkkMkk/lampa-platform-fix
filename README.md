@@ -1,1 +1,0 @@
-# lampa-platform-fix
